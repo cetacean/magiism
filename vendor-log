@@ -1,0 +1,6 @@
+fcd59fca7456889be7f2ad4515b7612fd6acef31	github.com/facebookgo/flagenv
+4edcbf8e531587f17036e722180c9cdcf5309d82	github.com/bwmarrin/discordgo
+e8f0f8aaa98dfb6586cbdf2978d511e3199a960a	github.com/gorilla/websocket
+f6b343c37ca80bfa8ea539da67a0b621f84fab1d	golang.org/x/crypto/nacl/secretbox
+f6b343c37ca80bfa8ea539da67a0b621f84fab1d	golang.org/x/crypto/poly1305
+f6b343c37ca80bfa8ea539da67a0b621f84fab1d	golang.org/x/crypto/salsa20/salsa
