@@ -166,9 +166,33 @@ func (g *Game) Place(pl *Player, d Domino, target *Path) bool {
 	return true
 }
 
+// Knock sets the knocked flag if a player has one tile left in their hand.
+func (g *Game) Knock(p *Player) bool {
+	if len(p.Hand) == 1 {
+		p.Knocked = true
+	}
+
+	return p.Knocked
+}
+
+// NextTurn marks the next player as "up", adding two tiles to their hand if
+// they only have one tile in their hand and haven't explicitly knocked.
+func (g *Game) NextTurn() *Player {
+	nextPlayer := (g.ActivePlayer + 1) % len(g.Players)
+	p := g.Players[nextPlayer]
+
+	if len(p.Hand) == 1 && !p.Knocked {
+		g.Draw(p)
+		g.Draw(p)
+		p.Knocked = false
+	}
+
+	return p
+}
+
 func handCount(playernum int) int {
 	switch playernum {
-	case 1, 2, 3, 4:
+	case 2, 3, 4:
 		return 10
 	case 5, 6:
 		return 9

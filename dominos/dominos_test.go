@@ -1,14 +1,10 @@
 package dominos
 
-import (
-	"testing"
-
-	"github.com/kr/pretty"
-)
+import "testing"
 
 func TestNewGame(t *testing.T) {
 	g := NewGame([]string{"Xena"})
-
-	pretty.Println(g)
-	pretty.Println(len(g.TilePool))
+	if g == nil {
+		t.Fatalf("game didn't initialize somehow :(")
+	}
 }
