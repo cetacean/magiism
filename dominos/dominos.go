@@ -141,14 +141,13 @@ func (g *Game) Draw(p *Player) error {
 
 // Place sets given Domino d from Player pl to the Path target if it fits.
 func (g *Game) Place(pl *Player, d Domino, target *Path) bool {
-	
+	var last Element
 	if len(target.Elements) == 0 {
 		if !g.Center.IsPlayable(d) {
 			return false
 		}
-	}
-	else {
-		last := target.Elements[len(target.Elements)-1]
+	} else {
+		last = target.Elements[len(target.Elements)-1]
 		if !last.IsPlayable(d) {
 			return false // Given domino d is not playable on the given Path.
 		}
