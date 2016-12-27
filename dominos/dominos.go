@@ -2,11 +2,8 @@ package dominos
 
 import (
 	"errors"
-	"log"
 	"math/rand"
 	"time"
-
-	"github.com/kr/pretty"
 )
 
 func init() {
@@ -110,7 +107,6 @@ func NewGame(players []string) *Game {
 		g.Trains[i] = path
 
 		for i := 0; i <= hc; i++ {
-			log.Println("drawing...")
 			err := g.Draw(newPlayer)
 			if err != nil {
 				panic(err)
@@ -139,8 +135,6 @@ func (g *Game) Draw(p *Player) error {
 	t := g.TilePool[0]
 	g.TilePool = g.TilePool[1:]
 	p.Hand = append(p.Hand, t)
-
-	pretty.Println(t)
 
 	return nil
 }
@@ -192,7 +186,9 @@ func (g *Game) NextTurn() *Player {
 
 func handCount(playernum int) int {
 	switch playernum {
-	case 2, 3, 4:
+	case 2:
+		return 6
+	case 3, 4:
 		return 10
 	case 5, 6:
 		return 9
