@@ -181,6 +181,7 @@ func (g *Game) Knock(p *Player) bool {
 func (g *Game) NextTurn() *Player {
 	nextPlayer := (g.ActivePlayer + 1) % len(g.Players)
 	p := g.Players[nextPlayer]
+	g.ActivePlayer = nextPlayer
 
 	if len(p.Hand) == 1 && !p.Knocked {
 		g.Draw(p)
