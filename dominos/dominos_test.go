@@ -11,8 +11,9 @@ func TestNewGame(t *testing.T) {
 
 func TestEndTurn(t *testing.T) {
 	g := NewGame([]string{"Xena", "Vic"})
-	p := g.NextTurn()
-	if p.ID != "Vic" {
+	prev := g.Players[g.ActivePlayer]
+	p, _ := g.NextTurn()
+	if p == prev {
 		t.Fatal("Turn progression did not work")
 	}
 

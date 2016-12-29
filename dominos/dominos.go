@@ -2,6 +2,7 @@ package dominos
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 	"time"
 )
@@ -53,6 +54,40 @@ type Path struct {
 
 	UnresolvedDouble bool
 	MexicanTrain     bool
+}
+
+func (p *Player) Display() string {
+	result := "YOUR HAND:"
+	for i, e := range p.Hand {
+		result = result + fmt.Sprintf(" %d:[%d|%d]", i, e.Right, e.Left)
+	}
+	return result
+}
+
+// Display a path
+func (p *Path) Display() string {
+	result := ""
+
+	if p.MexicanTrain {
+		result = result + "M>>"
+	} else {
+		result = result + fmt.Sprintf("%s>>", p.Player)
+	}
+
+	for i, e := range p.Elements {
+		if e.Flipped {
+			result = result + fmt.Sprintf(" %d:[%d|%d]", i, e.Right, e.Left)
+		} else {
+			result = result + fmt.Sprintf(" %d:[%d|%d]", i, e.Right, e.Left)
+		}
+	}
+	if p.Train {
+		result = result + " *"
+	}
+	if p.UnresolvedDouble {
+		result = result + " <!>"
+	}
+	return result
 }
 
 // Element is a wrapper for Domino that indicates if the Domino
@@ -112,6 +147,22 @@ func NewGame(players []string) *Game {
 				panic(err)
 			}
 		}
+
+		// Find largest piece in player hands
+		var largest Domino
+		var starter int
+		for i, player := range g.Players {
+			for _, dom := range player.Hand {
+				if dom.Left == dom.Right {
+					if dom.Left > largest.Left {
+						largest = dom
+						starter = i
+					}
+				}
+			}
+		}
+		g.Center = largest
+		g.ActivePlayer = starter
 	}
 
 	return g
@@ -177,18 +228,19 @@ func (g *Game) Knock(p *Player) bool {
 
 // NextTurn marks the next player as "up", adding two tiles to their hand if
 // they only have one tile in their hand and haven't explicitly knocked.
-func (g *Game) NextTurn() *Player {
+func (g *Game) NextTurn() (*Player, string) {
 	nextPlayer := (g.ActivePlayer + 1) % len(g.Players)
 	p := g.Players[nextPlayer]
 	g.ActivePlayer = nextPlayer
-
+	status := ""
 	if len(p.Hand) == 1 && !p.Knocked {
 		g.Draw(p)
 		g.Draw(p)
 		p.Knocked = false
+		status = "noknock"
 	}
 
-	return p
+	return p, status
 }
 
 func handCount(playernum int) int {
