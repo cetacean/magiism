@@ -34,6 +34,10 @@ func (d Domino) Value() int {
 	return d.Left + d.Right
 }
 
+func (d Domino) Display() string {
+	return fmt.Sprintf("[%d|%d]", d.Left, d.Right)
+}
+
 // Game represents the total state for a single game
 type Game struct {
 	TilePool []Domino
@@ -75,11 +79,7 @@ func (p *Path) Display() string {
 	}
 
 	for i, e := range p.Elements {
-		if e.Flipped {
-			result = result + fmt.Sprintf(" %d:[%d|%d]", i, e.Right, e.Left)
-		} else {
-			result = result + fmt.Sprintf(" %d:[%d|%d]", i, e.Right, e.Left)
-		}
+		result = result + fmt.Sprintf(" %d:%s", i, e.Display())
 	}
 	if p.Train {
 		result = result + " *"
@@ -95,6 +95,19 @@ func (p *Path) Display() string {
 type Element struct {
 	Domino
 	Flipped bool
+}
+
+func (e Element) Display() string {
+	if e.Flipped {
+		d := Domino{
+			Left:  e.Right,
+			Right: e.Left,
+		}
+
+		return d.Display()
+	}
+
+	return e.Display()
 }
 
 // NewGame creates a new game board out of a list of
