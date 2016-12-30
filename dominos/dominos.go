@@ -107,7 +107,7 @@ func (e Element) Display() string {
 		return d.Display()
 	}
 
-	return e.Display()
+	return e.Domino.Display()
 }
 
 // NewGame creates a new game board out of a list of
