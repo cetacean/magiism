@@ -112,14 +112,19 @@ func (g *game) Menu() error {
 			}
 		case "e":
 			p := g.GetActivePlayer()
+			nagged := false
 			for i, d := range p.Hand {
 				for j, path := range g.Trains {
 					_, err := g.CanPlace(p, d, path)
-					if err != nil {
-						log.Printf("you can place tile %s (%d) in your hand on path %d, fyi", d.Display(), i, j)
-						goto end
+					if err == nil {
+						nagged = true
+						log.Printf("you can place tile %s (%d) in your hand on path %d", d.Display(), i, j)
 					}
 				}
+			}
+
+			if nagged {
+				goto end
 			}
 
 			if !drawn {
