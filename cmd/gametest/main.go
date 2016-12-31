@@ -33,8 +33,9 @@ func atoi(s string) int {
 	return result
 }
 
+// End of turn sentry error
 var (
-	EndOfTurn = errors.New("end of turn")
+	ErrEndOfTurn = errors.New("end of turn")
 )
 
 func (g *game) Menu() error {
@@ -43,6 +44,16 @@ func (g *game) Menu() error {
 	for i, e := range g.Trains {
 		log.Printf("%d: %s", i, e.Display())
 	}
+
+	drawn := false
+	played := false
+
+	defer func() {
+		if !played {
+			p := g.GetActivePlayer().Path
+			p.Train = true
+		}
+	}()
 
 	log.Printf("%s", g.GetActivePlayer().Display())
 	log.Printf("Commands: (p)lace | (b)ig turn | (k)nock | (d)raw | (e)ndturn")
@@ -75,7 +86,7 @@ func (g *game) Menu() error {
 				log.Printf("could not place tile: %v", err)
 			}
 
-			return EndOfTurn
+			return ErrEndOfTurn
 		case "b":
 			log.Println("big turn not implemented")
 		case "k":
@@ -86,9 +97,25 @@ func (g *game) Menu() error {
 				log.Println("cannot knock, you have more than one tile in your hand")
 			}
 		case "d":
-			log.Println("draw not implemented")
+			if !drawn {
+				drawn = true
+				err := g.Draw(g.GetActivePlayer())
+				if err != nil {
+					log.Println("Out of tiles, cannot draw.")
+					return ErrEndOfTurn
+				}
+
+				log.Printf("you have drawn")
+				log.Printf("%s", g.GetActivePlayer().Display())
+			} else {
+				log.Println("already drawn, cannot draw again")
+			}
 		case "e":
-			return EndOfTurn
+			if !drawn {
+				log.Println("you have not drawn a tile, please draw a tile")
+			} else {
+				return ErrEndOfTurn
+			}
 		default:
 			log.Println("Command not understood, please try again.")
 		}
