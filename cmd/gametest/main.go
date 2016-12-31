@@ -59,6 +59,8 @@ func (g *game) Menu() error {
 	log.Printf("%s", g.GetActivePlayer().Display())
 	log.Printf("Commands: (p)lace | (b)ig turn | (k)nock | (d)raw | (e)ndturn")
 	scanner := bufio.NewScanner(os.Stdin)
+	fmt.Print("> ")
+
 	for scanner.Scan() {
 		if scanner.Err() != nil {
 			log.Println(scanner.Err())
@@ -136,7 +138,9 @@ func (g *game) Menu() error {
 		default:
 			log.Println("Command not understood, please try again.")
 		}
+
 	end:
+		fmt.Print("> ")
 	}
 
 	return nil
