@@ -55,7 +55,7 @@ type Game struct {
 type Path struct {
 	Player   string
 	Train    bool // If true, other players can play on it
-	Elements []Element
+	Elements []*Element
 
 	UnresolvedDouble bool
 	MexicanTrain     bool
@@ -99,8 +99,46 @@ type Element struct {
 	Flipped bool
 }
 
+// IsPlayable checks if the given element and previous node are playable against
+// a given domino.
+func (e *Element) IsPlayable(prev *Element, next Domino) bool {
+	// Okay so basically we're getting into graph theory for this so hold on to
+	// your orange juice.
+	lintersect := false // left intersection for e->prev
+	rintersect := false // right intersection for e->prev
+
+	// So from here we want to figure out where the previous domino intersects
+	// this element.
+	switch {
+	case prev.Left == e.Left, prev.Right == e.Left:
+		lintersect = true
+	case prev.Left == e.Right, prev.Right == e.Right:
+		rintersect = true
+		e.Flipped = true
+	}
+
+	// Now we have to determine if the next domino matches the free side.
+	switch {
+	// The left side of the domino is physically taken, only the right side is
+	// available for matching.
+	case lintersect && (next.Right == e.Right):
+		fallthrough
+	case lintersect && (next.Left == e.Right):
+		return true
+
+		// The right side of the domino is physically taken, only the left side is
+		// available for matching.
+	case rintersect && (next.Right == e.Left):
+		fallthrough
+	case rintersect && (next.Left == e.Left):
+		return true
+	}
+
+	return false
+}
+
 // Display gives a human-readable version of this struct for debugging purposes.
-func (e Element) Display() string {
+func (e *Element) Display() string {
 	if e.Flipped {
 		d := Domino{
 			Left:  e.Right,
@@ -233,26 +271,39 @@ var (
 // CanPlace returns an error if the given tile cannot be placed correctly and
 // returns the element of the target path if it is playable
 func (g *Game) CanPlace(pl *Player, d Domino, target *Path) (*Element, error) {
-	var last Element
-	if len(target.Elements) == 0 {
-		if !g.Center.IsPlayable(d) {
-			return nil, ErrNotPlayable
-		}
-
-		last = Element{
-			Domino: g.Center,
-		}
-	} else {
-		last = target.Elements[len(target.Elements)-1]
-		if !last.IsPlayable(d) {
-			return nil, ErrNotPlayable
-		}
-	}
+	// Ownership checks. Players can play on the target path if they own it, it
+	// has a train on it or it is the mexican train.
 	if target.Player != pl.ID && !target.Train && !target.MexicanTrain {
 		return nil, ErrDontOwnPath
 	}
 
-	return &last, nil
+	// If the target path is empty, compare simply against the center tile
+	// instead of checking for side matching.
+	if len(target.Elements) == 0 {
+		if g.Center.Left == d.Left || g.Center.Left == d.Right {
+			return &Element{Domino: d}, nil
+		}
+
+		if g.Center.IsPlayable(d) {
+			return &Element{Domino: d}, nil
+		}
+
+		return nil, ErrNotPlayable
+	}
+
+	var last *Element
+	if len(target.Elements) >= 2 {
+		last = target.Elements[len(target.Elements)-2]
+	} else {
+		last = &Element{Domino: g.Center}
+	}
+	curr := target.Elements[len(target.Elements)-1]
+
+	if curr.IsPlayable(last, d) {
+		return &Element{Domino: d}, nil
+	}
+
+	return nil, ErrNotPlayable
 }
 
 // Place sets given Domino d from Player pl to the Path target if it fits.
@@ -262,12 +313,18 @@ func (g *Game) Place(pl *Player, d Domino, target *Path) error {
 		return err
 	}
 
-	e := Element{
+	e := &Element{
 		Domino:  d,
 		Flipped: last.Left == d.Left || last.Right == d.Right,
 	}
 
 	target.Elements = append(target.Elements, e)
+
+	// If the user has their train up and is playing on their own path, remove
+	// the train from the player.
+	if pl.ID == target.Player && pl.Path.Train {
+		pl.Path.Train = false
+	}
 
 	return nil
 }
