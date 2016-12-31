@@ -42,7 +42,7 @@ func TestPlace(t *testing.T) {
 	g := NewGame([]string{"A", "B"})
 	g.Trains = []*Path{
 		&Path{
-			Elements: []Element{{
+			Elements: []*Element{{
 				Domino: Domino{
 					Left:  6,
 					Right: 1,
