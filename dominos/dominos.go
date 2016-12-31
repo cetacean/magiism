@@ -34,6 +34,7 @@ func (d Domino) Value() int {
 	return d.Left + d.Right
 }
 
+// Display gives a human-readable version of this struct for debugging purposes.
 func (d Domino) Display() string {
 	return fmt.Sprintf("[%d|%d]", d.Left, d.Right)
 }
@@ -60,15 +61,16 @@ type Path struct {
 	MexicanTrain     bool
 }
 
+// Display shows the player's hand for debugging purposes.
 func (p *Player) Display() string {
 	result := "YOUR HAND:"
 	for i, e := range p.Hand {
-		result = result + fmt.Sprintf(" %d:[%d|%d]", i, e.Right, e.Left)
+		result = result + fmt.Sprintf(" %d:%s", i, e.Display())
 	}
 	return result
 }
 
-// Display a path
+// Display a path for debugging purposes.
 func (p *Path) Display() string {
 	result := ""
 
@@ -97,6 +99,7 @@ type Element struct {
 	Flipped bool
 }
 
+// Display gives a human-readable version of this struct for debugging purposes.
 func (e Element) Display() string {
 	if e.Flipped {
 		d := Domino{
@@ -160,22 +163,30 @@ func NewGame(players []string) *Game {
 				panic(err)
 			}
 		}
+	}
 
-		// Find largest piece in player hands
-		var largest Domino
-		var starter int
-		for i, player := range g.Players {
-			for _, dom := range player.Hand {
-				if dom.Left == dom.Right {
-					if dom.Left > largest.Left {
-						largest = dom
-						starter = i
-					}
+	// Find largest piece in player hands
+	// XXX TODO find a better way to do this?
+	var largest Domino
+	var starter int
+	var handIndex int
+
+	for i, player := range g.Players {
+		for j, dom := range player.Hand {
+			if dom.Left == dom.Right { // XXX maybe Domino.IsDouble :: Domino -> bool
+				if dom.Left > largest.Left {
+					largest = dom
+					starter = i
+					handIndex = j
 				}
 			}
 		}
-		g.Center = largest
-		g.ActivePlayer = starter
+	}
+	g.Center = largest
+	g.ActivePlayer = starter
+	d := g.GetActivePlayer().RemoveFromHand(handIndex)
+	if g.Center != d {
+		panic("should be impossible")
 	}
 
 	return g
@@ -188,6 +199,19 @@ type Player struct {
 	Knocked bool
 	ID      string
 	Path    *Path
+}
+
+func removeHandAtIndex(hand []Domino, i int) []Domino {
+	hand[len(hand)-1], hand[i] = hand[i], hand[len(hand)-1]
+	return hand[:len(hand)-1]
+}
+
+// RemoveFromHand when given index `at` will remove that element from the player's
+// hand, returning it for future use.
+func (p *Player) RemoveFromHand(at int) Domino {
+	result := p.Hand[at]
+	p.Hand = removeHandAtIndex(p.Hand, at)
+	return result
 }
 
 // Draw adds a single tile from the game's tile pool to a player's hand.
@@ -254,6 +278,11 @@ func (g *Game) NextTurn() (*Player, string) {
 	}
 
 	return p, status
+}
+
+// GetActivePlayer returns the currently active Player structure.
+func (g *Game) GetActivePlayer() *Player {
+	return g.Players[g.ActivePlayer]
 }
 
 func handCount(playernum int) int {

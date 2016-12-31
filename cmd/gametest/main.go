@@ -10,7 +10,7 @@ import (
 
 func main() {
 	g := &game{dominos.NewGame([]string{"Xena", "Vic"})}
-	log.Printf("%s is the starting player!", g.Players[g.ActivePlayer].ID)
+	log.Printf("%s is the starting player!", g.GetActivePlayer().ID)
 	for {
 		g.Menu()
 	}
@@ -21,13 +21,13 @@ type game struct {
 }
 
 func (g *game) Menu() {
-	log.Printf("%s IS NOW UP", g.Players[g.ActivePlayer].ID)
+	log.Printf("%s IS NOW UP", g.GetActivePlayer().ID)
 	log.Printf("CENTER PIECE: (%d, %d)\n", g.Center.Left, g.Center.Right)
 	for _, e := range g.Trains {
 		log.Println(e.Display())
 	}
 
-	log.Printf("%s", g.Players[g.ActivePlayer].Display())
+	log.Printf("%s", g.GetActivePlayer().Display())
 	log.Printf("Commands: (p)lace | (b)ig turn | (k)nock | (d)raw | (e)ndturn")
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
