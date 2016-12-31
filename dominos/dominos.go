@@ -157,7 +157,7 @@ func NewGame(players []string) *Game {
 
 		g.Trains[i] = path
 
-		for i := 0; i <= hc; i++ {
+		for i := 0; i < hc; i++ {
 			err := g.Draw(newPlayer)
 			if err != nil {
 				panic(err)
