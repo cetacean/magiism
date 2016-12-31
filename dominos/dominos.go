@@ -110,9 +110,14 @@ func (e *Element) IsPlayable(prev *Element, next Domino) bool {
 	// So from here we want to figure out where the previous domino intersects
 	// this element.
 	switch {
-	case prev.Left == e.Left, prev.Right == e.Left:
+	case prev.Left == e.Left:
 		lintersect = true
-	case prev.Left == e.Right, prev.Right == e.Right:
+		e.Flipped = true
+	case prev.Right == e.Left:
+		lintersect = true
+	case prev.Left == e.Right:
+		rintersect = true
+	case prev.Right == e.Right:
 		rintersect = true
 		e.Flipped = true
 	}

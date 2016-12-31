@@ -1,6 +1,11 @@
 package dominos
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+
+	"github.com/kr/pretty"
+)
 
 func TestNewGame(t *testing.T) {
 	g := NewGame([]string{"Xena"})
@@ -51,12 +56,52 @@ func TestPlace(t *testing.T) {
 			Player: "A",
 		},
 	}
+	g.Center = Domino{6, 6}
 	p := g.GetActivePlayer()
 	p.ID = "A"
 	err := g.Place(p, Domino{1, 4}, g.Trains[0])
 	if err != nil {
-		t.Fatalf("could not place domino: %v", err)
+		pretty.Println(g)
+		t.Fatalf("could not place %v", err)
 	}
 
 	t.Logf("%s", g.Trains[0].Display())
+}
+
+func TestIsPlayable(t *testing.T) {
+	cases := []struct {
+		d1, d2     Domino
+		shouldwork bool
+	}{
+		{
+			d1: Domino{
+				Left:  0,
+				Right: 1,
+			},
+			d2: Domino{
+				Left:  1,
+				Right: 5,
+			},
+			shouldwork: true,
+		},
+		{
+			d1: Domino{
+				Left:  5,
+				Right: 5,
+			},
+			d2: Domino{
+				Left:  5,
+				Right: 2,
+			},
+			shouldwork: true,
+		},
+	}
+
+	for _, tcase := range cases {
+		t.Run(fmt.Sprintf("%s %s %v", tcase.d1.Display(), tcase.d2.Display(), tcase.shouldwork), func(t *testing.T) {
+			if tcase.d1.IsPlayable(tcase.d2) != tcase.shouldwork {
+				t.Fatalf("%s %s %v but expected %v", tcase.d1.Display(), tcase.d2.Display(), !tcase.shouldwork, tcase.shouldwork)
+			}
+		})
+	}
 }

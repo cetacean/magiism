@@ -49,6 +49,11 @@ func (g *game) Menu() error {
 	played := false
 
 	defer func() {
+		r := recover()
+		if r != nil {
+			panic(r)
+		}
+
 		if !played {
 			log.Println("Setting train on " + g.GetActivePlayer().ID)
 			p := g.GetActivePlayer().Path
@@ -96,6 +101,7 @@ func (g *game) Menu() error {
 				}
 			}
 
+			log.Println("Tile played successfully")
 			played = true
 			return ErrEndOfTurn
 		case "b":
