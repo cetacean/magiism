@@ -39,6 +39,9 @@ var (
 )
 
 func (g *game) Menu() error {
+	if g.UnresolvedDouble {
+		log.Println("Unresolved double")
+	}
 	log.Printf("%s IS NOW UP", g.GetActivePlayer().ID)
 	log.Printf("CENTER PIECE: (%d, %d)\n", g.Center.Left, g.Center.Right)
 	for i, e := range g.Trains {
@@ -49,10 +52,10 @@ func (g *game) Menu() error {
 	played := false
 
 	defer func() {
-		r := recover()
+		/*r := recover()
 		if r != nil {
 			panic(r)
-		}
+		}*/
 
 		if !played {
 			log.Println("Setting train on " + g.GetActivePlayer().ID)
@@ -61,12 +64,13 @@ func (g *game) Menu() error {
 		}
 	}()
 
-	log.Printf("%s", g.GetActivePlayer().Display())
+	log.Println(g.GetActivePlayer().Display())
 	log.Printf("Commands: (p)lace | (b)ig turn | (k)nock | (d)raw | (e)ndturn")
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Print("> ")
 
 	for scanner.Scan() {
+		log.Println(g.GetActivePlayer().Display())
 		if scanner.Err() != nil {
 			log.Println(scanner.Err())
 			return scanner.Err()
@@ -88,11 +92,13 @@ func (g *game) Menu() error {
 			pIndexInt := atoi(pIndex)
 			path := g.Trains[pIndexInt]
 			p := g.GetActivePlayer()
+			d := p.RemoveFromHand(hIndexInt)
 
-			err := g.Place(p, p.RemoveFromHand(hIndexInt), path)
+			err := g.Place(p, d, path)
 			if err != nil {
+				p.Hand = append(p.Hand, d)
 				switch err {
-				case dominos.ErrDontOwnPath, dominos.ErrNotPlayable:
+				case dominos.ErrDontOwnPath, dominos.ErrNotPlayable, dominos.ErrDanglingDouble:
 					log.Println(err)
 					goto end
 				default:
@@ -102,6 +108,14 @@ func (g *game) Menu() error {
 			}
 
 			log.Println("Tile played successfully")
+
+			if d.IsDouble() {
+				g.UnresolvedDouble = true
+				path.UnresolvedDouble = true
+				log.Println("You must resolve this double if you can")
+				goto end
+			}
+
 			played = true
 			return ErrEndOfTurn
 		case "b":

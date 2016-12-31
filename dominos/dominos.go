@@ -36,6 +36,9 @@ func (d Domino) Value() int {
 
 // Display gives a human-readable version of this struct for debugging purposes.
 func (d Domino) Display() string {
+	if d.IsDouble() {
+		return fmt.Sprintf("[%d||%d]", d.Left, d.Right)
+	}
 	return fmt.Sprintf("[%d|%d]", d.Left, d.Right)
 }
 
@@ -75,7 +78,7 @@ func (p *Path) Display() string {
 	result := ""
 
 	if p.MexicanTrain {
-		result = result + "M >>"
+		result = result + "       M >>"
 	} else {
 		result = result + fmt.Sprintf("%8s >>", p.Player)
 	}
@@ -112,14 +115,12 @@ func (e *Element) IsPlayable(prev *Element, next Domino) bool {
 	switch {
 	case prev.Left == e.Left:
 		lintersect = true
-		e.Flipped = true
 	case prev.Right == e.Left:
 		lintersect = true
 	case prev.Left == e.Right:
 		rintersect = true
 	case prev.Right == e.Right:
 		rintersect = true
-		e.Flipped = true
 	}
 
 	// Now we have to determine if the next domino matches the free side.
@@ -269,8 +270,9 @@ func (g *Game) Draw(p *Player) error {
 
 // Placement errors
 var (
-	ErrNotPlayable = errors.New("domino: domino is not playable on that path")
-	ErrDontOwnPath = errors.New("domino: path is not playable on by this player")
+	ErrNotPlayable    = errors.New("domino: domino is not playable on that path")
+	ErrDontOwnPath    = errors.New("domino: path is not playable on by this player")
+	ErrDanglingDouble = errors.New("domino: there is a dangling double that must be resolved")
 )
 
 // CanPlace returns an error if the given tile cannot be placed correctly and
@@ -280,6 +282,12 @@ func (g *Game) CanPlace(pl *Player, d Domino, target *Path) (*Element, error) {
 	// has a train on it or it is the mexican train.
 	if target.Player != pl.ID && !target.Train && !target.MexicanTrain {
 		return nil, ErrDontOwnPath
+	}
+
+	if g.UnresolvedDouble {
+		if !target.UnresolvedDouble {
+			return nil, ErrDanglingDouble
+		}
 	}
 
 	// If the target path is empty, compare simply against the center tile
@@ -319,8 +327,7 @@ func (g *Game) Place(pl *Player, d Domino, target *Path) error {
 	}
 
 	e := &Element{
-		Domino:  d,
-		Flipped: last.Left == d.Left || last.Right == d.Right,
+		Domino: d,
 	}
 
 	target.Elements = append(target.Elements, e)
@@ -329,6 +336,24 @@ func (g *Game) Place(pl *Player, d Domino, target *Path) error {
 	// the train from the player.
 	if pl.ID == target.Player && pl.Path.Train {
 		pl.Path.Train = false
+	}
+
+	// Check if the domino needs to be flipped or not
+	if last.IsDouble() && d.Right == last.Right {
+		e.Flipped = true
+	}
+	if last.IsDouble() && d.Left == last.Left {
+		e.Flipped = true
+	}
+
+	if d.IsDouble() {
+		g.UnresolvedDouble = true
+		target.UnresolvedDouble = true
+	}
+
+	if last.IsDouble() && target.UnresolvedDouble && g.UnresolvedDouble {
+		g.UnresolvedDouble = false
+		target.UnresolvedDouble = false
 	}
 
 	return nil

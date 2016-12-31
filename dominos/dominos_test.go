@@ -95,6 +95,17 @@ func TestIsPlayable(t *testing.T) {
 			},
 			shouldwork: true,
 		},
+		{
+			d1: Domino{
+				Left:  3,
+				Right: 3,
+			},
+			d2: Domino{
+				Left:  5,
+				Right: 3,
+			},
+			shouldwork: true,
+		},
 	}
 
 	for _, tcase := range cases {
