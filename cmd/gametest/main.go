@@ -86,9 +86,17 @@ func (g *game) Menu() error {
 
 			err := g.Place(p, p.RemoveFromHand(hIndexInt), path)
 			if err != nil {
-				log.Printf("could not place tile: %v", err)
+				switch err {
+				case dominos.ErrDontOwnPath, dominos.ErrNotPlayable:
+					log.Println(err)
+					goto end
+				default:
+					log.Println(err)
+					return err
+				}
 			}
 
+			played = true
 			return ErrEndOfTurn
 		case "b":
 			log.Println("big turn not implemented")

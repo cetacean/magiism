@@ -75,9 +75,9 @@ func (p *Path) Display() string {
 	result := ""
 
 	if p.MexicanTrain {
-		result = result + "M>>"
+		result = result + "M >>"
 	} else {
-		result = result + fmt.Sprintf("%s>>", p.Player)
+		result = result + fmt.Sprintf("%8s >>", p.Player)
 	}
 
 	for i, e := range p.Elements {
