@@ -50,6 +50,7 @@ func (g *game) Menu() error {
 
 	defer func() {
 		if !played {
+			log.Println("Setting train on " + g.GetActivePlayer().ID)
 			p := g.GetActivePlayer().Path
 			p.Train = true
 		}
