@@ -184,10 +184,7 @@ func NewGame(players []string) *Game {
 	}
 	g.Center = largest
 	g.ActivePlayer = starter
-	d := g.GetActivePlayer().RemoveFromHand(handIndex)
-	if g.Center != d {
-		panic("should be impossible")
-	}
+	g.GetActivePlayer().RemoveFromHand(handIndex)
 
 	return g
 }
@@ -227,21 +224,27 @@ func (g *Game) Draw(p *Player) error {
 	return nil
 }
 
+// Placement errors
+var (
+	ErrNotPlayable = errors.New("domino: domino is not playable on that path")
+	ErrDontOwnPath = errors.New("domino: path is not playable on by this player")
+)
+
 // Place sets given Domino d from Player pl to the Path target if it fits.
-func (g *Game) Place(pl *Player, d Domino, target *Path) bool {
+func (g *Game) Place(pl *Player, d Domino, target *Path) error {
 	var last Element
 	if len(target.Elements) == 0 {
 		if !g.Center.IsPlayable(d) {
-			return false
+			return ErrNotPlayable
 		}
 	} else {
 		last = target.Elements[len(target.Elements)-1]
 		if !last.IsPlayable(d) {
-			return false // Given domino d is not playable on the given Path.
+			return ErrNotPlayable
 		}
 	}
 	if target.Player != pl.ID && !target.Train && !target.MexicanTrain {
-		return false // Cannot play on a train you don't own
+		return ErrDontOwnPath
 	}
 
 	e := Element{
@@ -251,7 +254,7 @@ func (g *Game) Place(pl *Player, d Domino, target *Path) bool {
 
 	target.Elements = append(target.Elements, e)
 
-	return true
+	return nil
 }
 
 // Knock sets the knocked flag if a player has one tile left in their hand.

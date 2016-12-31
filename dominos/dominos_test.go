@@ -37,3 +37,26 @@ func TestCantDraw(t *testing.T) {
 		t.Fatalf("expected error, got nil")
 	}
 }
+
+func TestPlace(t *testing.T) {
+	g := NewGame([]string{"A", "B"})
+	g.Trains = []*Path{
+		&Path{
+			Elements: []Element{{
+				Domino: Domino{
+					Left:  6,
+					Right: 1,
+				},
+			}},
+			Player: "A",
+		},
+	}
+	p := g.GetActivePlayer()
+	p.ID = "A"
+	did := g.Place(p, Domino{1, 4}, g.Trains[0])
+	if !did {
+		t.Fatal("could not place domino")
+	}
+
+	t.Logf("%s", g.Trains[0].Display())
+}
