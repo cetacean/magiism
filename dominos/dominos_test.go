@@ -53,9 +53,9 @@ func TestPlace(t *testing.T) {
 	}
 	p := g.GetActivePlayer()
 	p.ID = "A"
-	did := g.Place(p, Domino{1, 4}, g.Trains[0])
-	if !did {
-		t.Fatal("could not place domino")
+	err := g.Place(p, Domino{1, 4}, g.Trains[0])
+	if err != nil {
+		t.Fatalf("could not place domino: %v", err)
 	}
 
 	t.Logf("%s", g.Trains[0].Display())

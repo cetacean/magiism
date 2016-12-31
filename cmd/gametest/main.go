@@ -111,6 +111,17 @@ func (g *game) Menu() error {
 				log.Println("already drawn, cannot draw again")
 			}
 		case "e":
+			p := g.GetActivePlayer()
+			for i, d := range p.Hand {
+				for j, path := range g.Trains {
+					_, err := g.CanPlace(p, d, path)
+					if err != nil {
+						log.Printf("you can place tile %s (%d) in your hand on path %d, fyi", d.Display(), i, j)
+						goto end
+					}
+				}
+			}
+
 			if !drawn {
 				log.Println("you have not drawn a tile, please draw a tile")
 			} else {
@@ -119,6 +130,7 @@ func (g *game) Menu() error {
 		default:
 			log.Println("Command not understood, please try again.")
 		}
+	end:
 	}
 
 	return nil

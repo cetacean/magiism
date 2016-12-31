@@ -230,21 +230,36 @@ var (
 	ErrDontOwnPath = errors.New("domino: path is not playable on by this player")
 )
 
-// Place sets given Domino d from Player pl to the Path target if it fits.
-func (g *Game) Place(pl *Player, d Domino, target *Path) error {
+// CanPlace returns an error if the given tile cannot be placed correctly and
+// returns the element of the target path if it is playable
+func (g *Game) CanPlace(pl *Player, d Domino, target *Path) (*Element, error) {
 	var last Element
 	if len(target.Elements) == 0 {
 		if !g.Center.IsPlayable(d) {
-			return ErrNotPlayable
+			return nil, ErrNotPlayable
+		}
+
+		last = Element{
+			Domino: g.Center,
 		}
 	} else {
 		last = target.Elements[len(target.Elements)-1]
 		if !last.IsPlayable(d) {
-			return ErrNotPlayable
+			return nil, ErrNotPlayable
 		}
 	}
 	if target.Player != pl.ID && !target.Train && !target.MexicanTrain {
-		return ErrDontOwnPath
+		return nil, ErrDontOwnPath
+	}
+
+	return &last, nil
+}
+
+// Place sets given Domino d from Player pl to the Path target if it fits.
+func (g *Game) Place(pl *Player, d Domino, target *Path) error {
+	last, err := g.CanPlace(pl, d, target)
+	if err != nil {
+		return err
 	}
 
 	e := Element{
