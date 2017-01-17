@@ -150,12 +150,10 @@ func (g *Game) HandleEvent(e *Event) (*Response, error) {
 		}
 
 		if g.Drawn && !g.Played {
-			r.GlobalMessage = SettingTrainMsg
+			r.GlobalMessage += "\n" + SettingTrainMsg
 		}
 
-		g.Drawn = false
-		g.Played = false
-
+		g.endOfTurn(r)
 		return r, ErrEndOfTurn
 
 	case PlayDomino:
@@ -185,14 +183,7 @@ func (g *Game) HandleEvent(e *Event) (*Response, error) {
 			return r, nil
 		}
 
-		_, status := g.NextTurn()
-		if status != "" {
-			switch status {
-			case "noknock":
-				r.GlobalMessage += fmt.Sprintf("\n$CURRENT_PLAYER has drawn two tiles for not knocking when they had one tile left")
-			}
-		}
-
+		g.endOfTurn(r)
 		return r, ErrEndOfTurn
 
 	case DrawDomino:
@@ -201,6 +192,7 @@ func (g *Game) HandleEvent(e *Event) (*Response, error) {
 			err := g.Draw(p)
 			if err != nil {
 				r.GlobalMessage = OutOfTilesMsg
+				g.endOfTurn(r)
 				return r, ErrEndOfTurn
 			}
 		} else {
@@ -222,4 +214,17 @@ func (g *Game) HandleEvent(e *Event) (*Response, error) {
 	}
 
 	return r, nil
+}
+
+func (g *Game) endOfTurn(r *Response) {
+	g.Drawn = false
+	g.Played = false
+
+	_, status := g.NextTurn()
+	if status != "" {
+		switch status {
+		case "noknock":
+			r.GlobalMessage += fmt.Sprintf("\n$CURRENT_PLAYER has drawn two tiles for not knocking when they had one tile left")
+		}
+	}
 }
