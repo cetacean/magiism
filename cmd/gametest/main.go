@@ -9,23 +9,31 @@ import (
 	"strconv"
 
 	"github.com/cetacean/magiism/dominos"
+	"github.com/cetacean/magiism/dominos/game"
 )
 
 func main() {
-	g := &game{dominos.NewGame([]string{"Xena", "Vic"})}
+	gg, err := game.New([]string{"Xena", "Vic"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	g := &wrapper{Game: gg}
 	log.Printf("%s is the starting player!", g.GetActivePlayer().ID)
 	for {
-		g.Menu()
-
-		p, status := g.NextTurn()
-		if status == "noknock" {
-			log.Printf("%s did not knock, drawn two tiles", p.ID)
+		err := g.Menu()
+		if err != nil {
+			switch err {
+			case game.ErrEndOfTurn:
+				continue
+			default:
+				log.Println(err)
+			}
 		}
 	}
 }
 
-type game struct {
-	*dominos.Game
+type wrapper struct {
+	*game.Game
 }
 
 func atoi(s string) int {
@@ -38,31 +46,18 @@ var (
 	ErrEndOfTurn = errors.New("end of turn")
 )
 
-func (g *game) Menu() error {
+func (g *wrapper) Menu() error {
 	if g.UnresolvedDouble {
 		log.Println("Unresolved double")
 	}
-	log.Printf("%s IS NOW UP", g.GetActivePlayer().ID)
+
+	p := g.GetActivePlayer()
+
+	log.Printf("%s IS NOW UP", p.ID)
 	log.Printf("CENTER PIECE: (%d, %d)\n", g.Center.Left, g.Center.Right)
 	for i, e := range g.Trains {
 		log.Printf("%d: %s", i, e.Display())
 	}
-
-	drawn := false
-	played := false
-
-	defer func() {
-		/*r := recover()
-		if r != nil {
-			panic(r)
-		}*/
-
-		if !played {
-			log.Println("Setting train on " + g.GetActivePlayer().ID)
-			p := g.GetActivePlayer().Path
-			p.Train = true
-		}
-	}()
 
 	log.Println(g.GetActivePlayer().Display())
 	log.Printf("Commands: (p)lace | (b)ig turn | (k)nock | (d)raw | (e)ndturn")
@@ -77,6 +72,9 @@ func (g *game) Menu() error {
 		}
 
 		t := scanner.Text()
+		ev := &game.Event{
+			PlayerID: p.ID,
+		}
 
 		switch t {
 		case "p":
@@ -90,88 +88,42 @@ func (g *game) Menu() error {
 
 			hIndexInt := atoi(hIndex)
 			pIndexInt := atoi(pIndex)
-			path := g.Trains[pIndexInt]
-			p := g.GetActivePlayer()
-			d, ok := p.RemoveFromHand(hIndexInt)
-			if !ok {
-				log.Println("Invalid hand index.")
-				goto end
-			}
+			ev.Action = game.PlayDomino
+			ev.PathID = pIndexInt
+			ev.HandIndex = hIndexInt
 
-			err := g.Place(p, d, path)
-			if err != nil {
-				p.Hand = append(p.Hand, d)
-				switch err {
-				case dominos.ErrDontOwnPath, dominos.ErrNotPlayable, dominos.ErrDanglingDouble:
-					log.Println(err)
-					goto end
-				default:
-					log.Println(err)
-					return err
-				}
-			}
-
-			log.Println("Tile played successfully")
-
-			if d.IsDouble() {
-				g.UnresolvedDouble = true
-				path.UnresolvedDouble = true
-				log.Println("You must resolve this double if you can")
-				goto end
-			}
-
-			played = true
-			return ErrEndOfTurn
 		case "b":
 			log.Println("big turn not implemented")
 		case "k":
-			p := g.GetActivePlayer()
-			if g.Knock(p) {
-				log.Printf("%s has knocked, they only have one domino left!", p.ID)
-			} else {
-				log.Println("cannot knock, you have more than one tile in your hand")
-			}
+			ev.Action = game.Knock
 		case "d":
-			if !drawn {
-				drawn = true
-				err := g.Draw(g.GetActivePlayer())
-				if err != nil {
-					log.Println("Out of tiles, cannot draw.")
-					return ErrEndOfTurn
-				}
-
-				log.Printf("you have drawn")
-				log.Printf("%s", g.GetActivePlayer().Display())
-			} else {
-				log.Println("already drawn, cannot draw again")
-			}
+			ev.Action = game.DrawDomino
 		case "e":
-			p := g.GetActivePlayer()
-			nagged := false
-			for i, d := range p.Hand {
-				for j, path := range g.Trains {
-					_, err := g.CanPlace(p, d, path)
-					if err == nil {
-						nagged = true
-						log.Printf("you can place tile %s (%d) in your hand on path %d", d.Display(), i, j)
-					}
-				}
-			}
-
-			if nagged {
-				goto end
-			}
-
-			if !drawn {
-				log.Println("you have not drawn a tile, please draw a tile")
-			} else {
-				return ErrEndOfTurn
-			}
-		default:
-			log.Println("Command not understood, please try again.")
+			ev.Action = game.EndTurn
 		}
 
-	end:
+		resp, err := g.HandleEvent(ev)
+		if err == game.ErrEndOfTurn {
+		}
+		if err != nil {
+			switch err {
+			case game.ErrEndOfTurn:
+				log.Println(resp.GlobalMessage)
+				log.Println("user: ", resp.UserMessage)
+				return nil
+
+			case dominos.ErrDontOwnPath:
+				log.Println("You do not own the path you tried to play on and it is not marked to be playable on")
+			case dominos.ErrNotPlayable:
+				log.Println("That domino is unplayable on that path.")
+			case dominos.ErrDanglingDouble:
+				log.Println("There is a dangling double that must be resolved")
+
+			default:
+				return err
+			}
+		}
+
 		fmt.Print("> ")
 	}
 
