@@ -92,7 +92,11 @@ func (g *game) Menu() error {
 			pIndexInt := atoi(pIndex)
 			path := g.Trains[pIndexInt]
 			p := g.GetActivePlayer()
-			d := p.RemoveFromHand(hIndexInt)
+			d, ok := p.RemoveFromHand(hIndexInt)
+			if !ok {
+				log.Println("Invalid hand index.")
+				goto end
+			}
 
 			err := g.Place(p, d, path)
 			if err != nil {
