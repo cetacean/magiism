@@ -16,6 +16,7 @@ var (
 	ErrNotYourTurn        = errors.New("game: it is not your turn")
 	ErrInvalidHandIndex   = errors.New("game: invalid hand index")
 	ErrEndOfTurn          = errors.New("game: your turn is now over")
+	ErrUnknownAction      = errors.New("game: unknown action")
 )
 
 // Action is the kind of turn action the player is taking.
@@ -113,11 +114,9 @@ func (g *Game) HandleEvent(e *Event) (*Response, error) {
 
 			if g.Knock(kp) {
 				r.GlobalMessage = KnockSuccessfulMsg
-
-				goto ok
-			} else {
-				return nil, ErrNotYourTurn
+				return r, nil
 			}
+			return nil, ErrNotYourTurn
 		}
 	}
 
@@ -141,13 +140,13 @@ func (g *Game) HandleEvent(e *Event) (*Response, error) {
 
 		if nagged {
 			r.Success = false
-			goto ok
+			return r, nil
 		}
 
 		if !g.Played && !g.Drawn {
 			r.UserMessage = MustTryDrawingMsg
 			r.Success = false
-			goto ok
+			return r, nil
 		}
 
 		if g.Drawn && !g.Played {
@@ -183,7 +182,7 @@ func (g *Game) HandleEvent(e *Event) (*Response, error) {
 			r.UserMessage = MustResolveDoubleMsg
 			g.Played = false
 
-			goto ok
+			return r, nil
 		}
 
 		return r, ErrEndOfTurn
@@ -205,13 +204,14 @@ func (g *Game) HandleEvent(e *Event) (*Response, error) {
 			r.GlobalMessage = KnockSuccessfulMsg
 			r.Success = true
 			p.Knocked = true
-			goto ok
+			return r, nil
 		} else {
 			r.UserMessage = CannotKnockMsg
 			r.Success = false
 		}
+	default:
+		return nil, ErrUnknownAction
 	}
 
-ok:
 	return r, nil
 }
