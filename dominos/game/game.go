@@ -3,6 +3,8 @@ package game
 
 import (
 	"errors"
+	"fmt"
+	"log"
 
 	"github.com/Xe/uuid"
 	"github.com/cetacean/magiism/dominos"
@@ -12,6 +14,8 @@ import (
 var (
 	ErrGameCreationFailed = errors.New("game: dominos.NewGame failed, please report as a bug")
 	ErrNotYourTurn        = errors.New("game: it is not your turn")
+	ErrInvalidHandIndex   = errors.New("game: invalid hand index")
+	ErrEndOfTurn          = errors.New("game: your turn is now over")
 )
 
 // Action is the kind of turn action the player is taking.
@@ -25,14 +29,25 @@ const (
 	Knock
 )
 
+// Possible messages to the client, TODO: translations?
+const (
+	KnockSuccessfulMsg   = "$EVENT_PLAYER_NAME has only one tile left!"
+	CannotKnockMsg       = "You cannot knock, you have more than one tile in your hand"
+	OutOfTilesMsg        = "Out of tiles, can't draw"
+	MustResolveDoubleMsg = "You must resolve this double if you can"
+	PlaySuccessfulMsg    = "$EVENT_PLAYER_NAME has played $DOMINO on $PATH_ID_OWNER"
+	MustTryDrawingMsg    = "You must try to draw a tile and see if that works before ending your turn"
+	SettingTrainMsg      = "Setting train on $EVENT_PLAYER_NAME"
+)
+
 // Event is a single user command -> game state event.
 type Event struct {
 	Action   Action
 	PlayerID string // This must be populated by the server, never by the user directly.
 
 	// If PlayDomino is chosen, these next two fields are filled.
-	PathID int
-	Domino dominos.Domino
+	PathID    int
+	HandIndex int
 }
 
 // Response is the result of the event being run against the game state.
@@ -66,8 +81,9 @@ type Store interface {
 
 // New creates a new game with given players.
 func New(players []string) (*Game, error) {
-	dg := dominos.NewGame(players)
-	if dg == nil {
+	dg, err := dominos.NewGame(players)
+	if err != nil {
+		log.Println("game creation failed: ", err)
 		return nil, ErrGameCreationFailed
 	}
 
@@ -82,7 +98,27 @@ func New(players []string) (*Game, error) {
 // HandleEvent handles a single game event, failing if it failed.
 func (g *Game) HandleEvent(e *Event) (*Response, error) {
 	r := &Response{
-		State: g.Game,
+		State:    g.Game,
+		PlayerID: e.PlayerID,
+	}
+
+	p := g.GetActivePlayer()
+
+	if e.Action == Knock {
+		if e.PlayerID != p.ID {
+			kp, ok := g.GetPlayerByID(e.PlayerID)
+			if !ok {
+				return nil, errors.New("impossible state, tried to look up a player that doesn't exist?")
+			}
+
+			if g.Knock(kp) {
+				r.GlobalMessage = KnockSuccessfulMsg
+
+				goto ok
+			} else {
+				return nil, ErrNotYourTurn
+			}
+		}
 	}
 
 	if g.GetActivePlayer().ID != e.PlayerID {
@@ -90,7 +126,92 @@ func (g *Game) HandleEvent(e *Event) (*Response, error) {
 	}
 
 	// switch on e.Action and then take the appropriate actions.
+	switch e.Action {
+	case EndTurn:
+		nagged := false
+		for i, d := range p.Hand {
+			for j, path := range g.Trains {
+				_, err := g.CanPlace(p, d, path)
+				if err == nil {
+					nagged = true
+					r.UserMessage += fmt.Sprintf("you can place tile %s (%d) in your hand on path %d\n", d.Display(), i, j)
+				}
+			}
+		}
 
-	r.Success = true
+		if nagged {
+			r.Success = false
+			goto ok
+		}
+
+		if !g.Played && !g.Drawn {
+			r.UserMessage = MustTryDrawingMsg
+			r.Success = false
+			goto ok
+		}
+
+		if g.Drawn && !g.Played {
+			r.GlobalMessage = SettingTrainMsg
+		}
+
+		g.Drawn = false
+		g.Played = false
+
+		return r, ErrEndOfTurn
+
+	case PlayDomino:
+		path := g.Trains[e.PathID]
+		d, ok := p.RemoveFromHand(e.HandIndex)
+		if !ok {
+			return nil, ErrInvalidHandIndex
+		}
+
+		err := g.Place(p, d, path)
+		if err != nil {
+			p.Hand = append(p.Hand, d)
+
+			return nil, err
+		}
+
+		r.GlobalMessage = PlaySuccessfulMsg
+		r.Success = true
+		g.Played = true
+
+		if d.IsDouble() {
+			g.UnresolvedDouble = true
+			path.UnresolvedDouble = true
+			r.UserMessage = MustResolveDoubleMsg
+			g.Played = false
+
+			goto ok
+		}
+
+		return r, ErrEndOfTurn
+
+	case DrawDomino:
+		if !g.Drawn {
+			g.Drawn = true
+			err := g.Draw(p)
+			if err != nil {
+				r.GlobalMessage = OutOfTilesMsg
+				return r, ErrEndOfTurn
+			}
+		} else {
+			r.Success = false
+		}
+
+	case Knock:
+		if g.Knock(p) {
+			r.GlobalMessage = KnockSuccessfulMsg
+			r.Success = true
+			p.Knocked = true
+			goto ok
+		} else {
+			r.UserMessage = CannotKnockMsg
+			r.Success = false
+		}
+	}
+
+ok:
 	return r, nil
 }
