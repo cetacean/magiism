@@ -185,6 +185,14 @@ func (g *Game) HandleEvent(e *Event) (*Response, error) {
 			return r, nil
 		}
 
+		_, status := g.NextTurn()
+		if status != "" {
+			switch status {
+			case "noknock":
+				r.GlobalMessage += fmt.Sprintf("\n$CURRENT_PLAYER has drawn two tiles for not knocking when they had one tile left")
+			}
+		}
+
 		return r, ErrEndOfTurn
 
 	case DrawDomino:
