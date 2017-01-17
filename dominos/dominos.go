@@ -173,7 +173,7 @@ func (e *Element) Display() string {
 
 // NewGame creates a new game board out of a list of
 // players.
-func NewGame(players []string) *Game {
+func NewGame(players []string) (*Game, error) {
 	g := &Game{
 		Trains: make([]*Path, len(players)+1),
 	}
@@ -218,7 +218,7 @@ func NewGame(players []string) *Game {
 		for i := 0; i < hc; i++ {
 			err := g.Draw(newPlayer)
 			if err != nil {
-				panic(err)
+				return nil, err
 			}
 		}
 	}
@@ -244,7 +244,7 @@ func NewGame(players []string) *Game {
 	g.ActivePlayer = starter
 	g.GetActivePlayer().RemoveFromHand(handIndex)
 
-	return g
+	return g, nil
 }
 
 // Player is a single player in the game
@@ -263,10 +263,14 @@ func removeHandAtIndex(hand []Domino, i int) []Domino {
 
 // RemoveFromHand when given index `at` will remove that element from the player's
 // hand, returning it for future use.
-func (p *Player) RemoveFromHand(at int) Domino {
+func (p *Player) RemoveFromHand(at int) (Domino, bool) {
+	if len(p.Hand) >= at {
+		return Domino{}, false
+	}
+
 	result := p.Hand[at]
 	p.Hand = removeHandAtIndex(p.Hand, at)
-	return result
+	return result, true
 }
 
 // Draw adds a single tile from the game's tile pool to a player's hand.
@@ -397,6 +401,16 @@ func (g *Game) NextTurn() (*Player, string) {
 	}
 
 	return p, status
+}
+
+func (g *Game) GetPlayerByID(id string) (*Player, bool) {
+	for _, p := range g.Players {
+		if p.ID == id {
+			return p, true
+		}
+	}
+
+	return nil, false
 }
 
 // GetActivePlayer returns the currently active Player structure.
