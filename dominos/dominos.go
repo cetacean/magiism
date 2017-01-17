@@ -34,6 +34,11 @@ func (d Domino) Value() int {
 	return d.Left + d.Right
 }
 
+// Emoji returns the emoji-fied version of the domino for Discord or slack.
+func (d Domino) Emoji() string {
+	return fmt.Sprintf("[:d%d:|:d%d:]", d.Left, d.Right)
+}
+
 // Display gives a human-readable version of this struct for debugging purposes.
 func (d Domino) Display() string {
 	if d.IsDouble() {
@@ -44,9 +49,9 @@ func (d Domino) Display() string {
 
 // Game represents the total state for a single game
 type Game struct {
-	TilePool []Domino
+	TilePool []Domino `json:"-"`
 	Trains   []*Path
-	Players  []*Player
+	Players  []*Player `json:"-"`
 	Center   Domino
 
 	UnresolvedDouble bool
@@ -69,6 +74,15 @@ func (p *Player) Display() string {
 	result := "YOUR HAND:"
 	for i, e := range p.Hand {
 		result = result + fmt.Sprintf(" %d:%s", i, e.Display())
+	}
+	return result
+}
+
+// EmojiHand returns the player's hand emoji-formatted for Discord or Slack.
+func (p *Player) EmojiHand() string {
+	result := "Your hand: "
+	for i, e := range p.Hand {
+		result += fmt.Sprintf(", %d: %s", i, e.Emoji())
 	}
 	return result
 }
